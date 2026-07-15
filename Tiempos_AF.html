@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard de Demoras - Salida Las Cañas</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+
+  <style>
+    :root {
+      --fondo: #0f172a;
+      --panel: #182235;
+      --panel2: #202c42;
+      --texto: #f8fafc;
+      --secundario: #a9b4c5;
+      --borde: #334155;
+      --acento: #38bdf8;
+      --verde: #22c55e;
+      --amarillo: #f59e0b;
+      --rojo: #ef4444;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--fondo);
+      color: var(--texto);
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    .contenedor {
+      width: min(1500px, 96%);
+      margin: auto;
+      padding: 22px 0 40px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(24px, 3vw, 36px);
+    }
+
+    .subtitulo {
+      margin: 7px 0 18px;
+      color: var(--secundario);
+      font-size: 14px;
+    }
+
+    .estado {
+      margin-bottom: 15px;
+      padding: 11px 14px;
+      border-radius: 10px;
+      background: var(--panel);
+      border: 1px solid var(--borde);
+      color: var(--secundario);
+    }
+
+    .estado.ok { color: #86efac; }
+    .estado.error { color: #fca5a5; }
+
+    .filtros {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(180px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+      padding: 15px;
+      background: var(--panel);
+      border: 1px solid var(--borde);
+      border-radius: 14px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--secundario);
+      font-size: 11px;
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+
+    select, input, button {
+      width: 100%;
+      min-height: 40px;
+      border: 1px solid var(--borde);
+      border-radius: 8px;
+      padding: 8px 10px;
+      background: var(--panel2);
+      color: var(--texto);
+      font-size: 14px;
+    }
+
+    button {
+      border: none;
+      background: var(--acento);
+      color: #062033;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(160px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .kpi, .panel {
+      background: var(--panel);
+      border: 1px solid var(--borde);
+      border-radius: 14px;
+    }
+
+    .kpi {
+      padding: 16px;
+      min-height: 105px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+
+    .kpi-titulo {
+      color: var(--secundario);
+      font-size: 11px;
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+
+    .kpi-valor {
+      margin-top: 10px;
+      font-size: clamp(22px, 3vw, 31px);
+      font-weight: bold;
+    }
+
+    .graficos {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .panel {
+      padding: 16px;
+      min-width: 0;
+    }
+
+    .panel h2 {
+      margin: 0 0 14px;
+      font-size: 17px;
+    }
+
+    .grafico {
+      position: relative;
+      height: 340px;
+    }
+
+    .tabla-wrap {
+      overflow-x: auto;
+      border-radius: 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      white-space: nowrap;
+      font-size: 13px;
+    }
+
+    th, td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--borde);
+      text-align: left;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: var(--panel2);
+      color: var(--secundario);
+      font-size: 11px;
+      text-transform: uppercase;
+    }
+
+    tr:hover td {
+      background: rgba(255,255,255,.03);
+    }
+
+
+    .sin-datos {
+      padding: 28px;
+      color: var(--secundario);
+      text-align: center;
+    }
+
+    .acciones-seleccion {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+
+    .acciones-seleccion button,
+
+    .acciones-seleccion span {
+      color: var(--secundario);
+      font-size: 13px;
+    }
+
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(2, 6, 23, 0.78);
+      backdrop-filter: blur(4px);
+    }
+
+    .modal.oculto {
+      display: none;
+    }
+
+    .modal-contenido {
+      width: min(1100px, 96vw);
+      max-height: 85vh;
+      overflow: hidden;
+      background: var(--panel);
+      border: 1px solid var(--borde);
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, .45);
+    }
+
+    .modal-encabezado {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--borde);
+    }
+
+    .modal-encabezado h3 {
+      margin: 0;
+      font-size: 18px;
+    }
+
+    .boton-cerrar {
+      width: 38px;
+      min-width: 38px;
+      min-height: 38px;
+      padding: 0;
+      border-radius: 50%;
+      background: var(--panel2);
+      color: var(--texto);
+      font-size: 24px;
+      line-height: 1;
+    }
+
+    .modal .tabla-wrap {
+      max-height: calc(85vh - 70px);
+      overflow: auto;
+      padding: 12px;
+    }
+
+    .tabla-compacta table {
+      font-size: 12px;
+    }
+
+    .tabla-compacta th,
+    .tabla-compacta td {
+      padding: 7px 9px;
+    }
+
+    .tabla-compacta th:first-child,
+    .tabla-compacta td:first-child {
+      width: auto;
+      text-align: left;
+    }
+
+
+    th:first-child,
+    td:first-child {
+      width: 46px;
+      text-align: center;
+    }
+
+    input[type="checkbox"] {
+      width: 18px;
+      min-height: 18px;
+      accent-color: var(--acento);
+      cursor: pointer;
+    }
+
+    #generarDetalle {
+      color: #000000 !important;
+    }
+
+    @media (max-width: 1050px) {
+      .filtros, .kpis { grid-template-columns: repeat(2, 1fr); }
+      .graficos { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 650px) {
+      .filtros, .kpis { grid-template-columns: 1fr; }
+      .contenedor { width: 94%; }
+      .grafico { height: 300px; }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="contenedor">
+    <h1>Dashboard de Demoras — Salida Las Cañas</h1>
+
+    <div id="estado" class="estado">Cargando planilla desde Dropbox…</div>
+
+    <section class="filtros">
+      <div>
+        <label for="matricula">Matrícula</label>
+        <select id="matricula">
+          <option value="">Todas</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="desde">Fecha desde</label>
+        <select id="desde">
+          <option value="">Todas</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="hasta">Fecha hasta</label>
+        <select id="hasta">
+          <option value="">Todas</option>
+        </select>
+      </div>
+
+      <div>
+        <button id="actualizar">Actualizar ahora</button>
+      </div>
+
+      <div>
+        <button id="limpiar">Limpiar filtros</button>
+      </div>
+    </section>
+
+    <section class="kpis">
+
+      <article class="kpi">
+        <div class="kpi-titulo">Matrículas</div>
+        <div id="kpiMatriculas" class="kpi-valor">0</div>
+      </article>
+
+      <article class="kpi">
+        <div class="kpi-titulo">Demora promedio</div>
+        <div id="kpiPromedio" class="kpi-valor">00:00</div>
+      </article>
+
+      <article class="kpi">
+        <div class="kpi-titulo">Demora máxima</div>
+        <div id="kpiMaxima" class="kpi-valor">00:00</div>
+      </article>
+    </section>
+
+    <section class="graficos">
+      <article class="panel">
+        <h2>Demora promedio por matrícula</h2>
+        <div class="grafico"><canvas id="graficoPromedio"></canvas></div>
+      </article>
+    </section>
+
+    <section class="panel">
+      <h2>Detalle de demoras</h2>
+      <div class="acciones-seleccion">
+        <button id="generarDetalle" type="button">Generar detalle seleccionado</button>
+        <span id="cantidadSeleccionadas">0 filas seleccionadas</span>
+      </div>
+
+      <div class="tabla-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="text-align:center;">
+                <input type="checkbox" id="seleccionarTodas" title="Seleccionar todas">
+              </th>
+              <th>Matrícula</th>
+              <th>Ingreso a Zona</th>
+              <th>Comienzo de carga</th>
+              <th>Salida de Zona</th>
+              <th>Demora</th>
+            </tr>
+          </thead>
+          <tbody id="tabla"></tbody>
+        </table>
+      </div>
+
+      <div id="modalDetalle" class="modal oculto">
+        <div class="modal-contenido">
+          <div class="modal-encabezado">
+            <h3>Demora Las Cañas</h3>
+            <button id="cerrarModal" type="button" class="boton-cerrar">×</button>
+          </div>
+
+          <div class="tabla-wrap tabla-compacta">
+            <table>
+              <thead>
+                <tr>
+                  <th>Matrícula</th>
+                  <th>Ingreso a Zona</th>
+                  <th>Comienzo de carga</th>
+                  <th>Salida de Zona</th>
+                  <th>Demora</th>
+                </tr>
+              </thead>
+              <tbody id="tablaDetalleSeleccionado"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const URL_EXCEL =
+      "https://dl.dropboxusercontent.com/scl/fi/relpn8ebtrvihuo4ctjrq/SALIDA-LAS-CA-AS.xlsx?rlkey=ee558jbspnshf3dgz9lb2cbky&dl=1";
+
+    const HOJA = "Hoja1";
+    const ACTUALIZAR_CADA_MS = 5 * 60 * 1000;
+
+    let registros = [];
+    let graficoPromedio = null;
+
+    function formatoFecha(fecha) {
+      const dia = String(fecha.getDate()).padStart(2, "0");
+      const mes = String(fecha.getMonth() + 1).padStart(2, "0");
+      const anio = fecha.getFullYear();
+      const hora = String(fecha.getHours()).padStart(2, "0");
+      const minutos = String(fecha.getMinutes()).padStart(2, "0");
+
+      return `${dia}/${mes}/${anio} ${hora}:${minutos}`;
+    }
+
+    function normalizarTexto(valor) {
+      return String(valor ?? "")
+        .trim()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toUpperCase();
+    }
+
+    function fechaDesdeExcel(valor) {
+      if (valor instanceof Date && !Number.isNaN(valor.getTime())) {
+        return valor;
+      }
+
+      if (typeof valor === "number") {
+        const partes = XLSX.SSF.parse_date_code(valor);
+        if (!partes) return null;
+
+        return new Date(
+          partes.y,
+          partes.m - 1,
+          partes.d,
+          partes.H || 0,
+          partes.M || 0,
+          Math.floor(partes.S || 0)
+        );
+      }
+
+      const texto = String(valor ?? "").trim();
+      if (!texto) return null;
+
+      const coincidencia = texto.match(
+        /^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/
+      );
+
+      if (coincidencia) {
+        return new Date(
+          Number(coincidencia[3]),
+          Number(coincidencia[2]) - 1,
+          Number(coincidencia[1]),
+          Number(coincidencia[4] || 0),
+          Number(coincidencia[5] || 0),
+          Number(coincidencia[6] || 0)
+        );
+      }
+
+      const fecha = new Date(texto);
+      return Number.isNaN(fecha.getTime()) ? null : fecha;
+    }
+
+    function minutosAHHMM(minutos) {
+      if (!Number.isFinite(minutos)) return "00:00";
+
+      const total = Math.round(minutos);
+      const horas = Math.floor(total / 60);
+      const mins = total % 60;
+
+      return `${String(horas).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
+    }
+
+
+    function claveDia(fecha) {
+      const anio = fecha.getFullYear();
+      const mes = String(fecha.getMonth() + 1).padStart(2, "0");
+      const dia = String(fecha.getDate()).padStart(2, "0");
+      return `${anio}-${mes}-${dia}`;
+    }
+
+    function calcularDemoras() {
+      const grupos = new Map();
+
+      /*
+        Agrupar por matrícula y ordenar cronológicamente.
+        Los registros se emparejan de a dos:
+
+        valor 2 - valor 1
+        valor 4 - valor 3
+        valor 6 - valor 5
+      */
+      for (const registro of registros) {
+        if (!grupos.has(registro.matricula)) {
+          grupos.set(registro.matricula, []);
+        }
+
+        grupos.get(registro.matricula).push(registro.fecha);
+      }
+
+      const resultado = [];
+
+      for (const [matricula, fechas] of grupos.entries()) {
+        fechas.sort((a, b) => a - b);
+
+        /*
+          Avanzar de dos en dos.
+          Si queda un registro sin pareja, no se calcula todavía.
+        */
+        for (let i = 0; i + 1 < fechas.length; i += 2) {
+          const inicial = fechas[i];
+          const siguiente = fechas[i + 1];
+
+          const diaInicial = new Date(
+            inicial.getFullYear(),
+            inicial.getMonth(),
+            inicial.getDate()
+          );
+
+          const diaSiguiente = new Date(
+            siguiente.getFullYear(),
+            siguiente.getMonth(),
+            siguiente.getDate()
+          );
+
+          const diferenciaDias = Math.round(
+            (diaSiguiente - diaInicial) / 86400000
+          );
+
+          let inicioCalculo;
+
+          /*
+            Si el registro inicial pertenece a un día anterior al
+            registro siguiente, comenzar a contar a las 08:00 del
+            día del registro siguiente.
+          */
+          if (diferenciaDias >= 1) {
+            inicioCalculo = new Date(
+              siguiente.getFullYear(),
+              siguiente.getMonth(),
+              siguiente.getDate(),
+              8, 0, 0, 0
+            );
+          } else {
+            /*
+              Si ambos registros son del mismo día:
+              - antes de las 08:00: usar 08:00;
+              - desde las 08:00: usar el horario real del inicial.
+            */
+            const inicioJornada = new Date(
+              inicial.getFullYear(),
+              inicial.getMonth(),
+              inicial.getDate(),
+              8, 0, 0, 0
+            );
+
+            inicioCalculo = inicial < inicioJornada
+              ? inicioJornada
+              : inicial;
+          }
+
+          let minutosReales = (siguiente - inicioCalculo) / 60000;
+
+          /*
+            Si el segundo registro es anterior al inicio válido,
+            la pareja no genera una demora utilizable.
+          */
+          if (minutosReales < 0) continue;
+
+          /*
+            La demora mínima válida es de 30 minutos.
+          */
+          const minutos = Math.max(30, minutosReales);
+
+          resultado.push({
+            matricula,
+            inicial,
+            inicioCalculo,
+            siguiente,
+            minutos,
+            minutosReales,
+            horas: minutos / 60
+          });
+        }
+      }
+
+      return resultado.sort((a, b) => {
+        const porMatricula = a.matricula.localeCompare(
+          b.matricula,
+          "es",
+          { sensitivity: "base" }
+        );
+
+        if (porMatricula !== 0) return porMatricula;
+
+        return b.inicioCalculo - a.inicioCalculo;
+      });
+    }
+
+    function filtrarDemoras() {
+      const matricula = document.getElementById("matricula").value;
+      const desdeTexto = document.getElementById("desde").value;
+      const hastaTexto = document.getElementById("hasta").value;
+
+      /*
+        Los filtros trabajan por día calendario y toman como referencia
+        la columna Inicio para cálculo.
+      */
+      return calcularDemoras().filter(item => {
+        if (matricula && item.matricula !== matricula) return false;
+
+        const diaInicioCalculo = claveDia(item.inicioCalculo);
+
+        if (desdeTexto && diaInicioCalculo < desdeTexto) return false;
+        if (hastaTexto && diaInicioCalculo > hastaTexto) return false;
+
+        return true;
+      });
+    }
+
+    function cargarSelectorMatriculas() {
+      const select = document.getElementById("matricula");
+      const valorActual = select.value;
+      const matriculas = [...new Set(registros.map(x => x.matricula))]
+        .sort((a, b) => a.localeCompare(b));
+
+      select.innerHTML = '<option value="">Todas</option>';
+
+      for (const matricula of matriculas) {
+        const opcion = document.createElement("option");
+        opcion.value = matricula;
+        opcion.textContent = matricula;
+        select.appendChild(opcion);
+      }
+
+      select.value = valorActual;
+    }
+
+    function cargarSelectoresFechas() {
+      const selectDesde = document.getElementById("desde");
+      const selectHasta = document.getElementById("hasta");
+
+      const valorDesde = selectDesde.value;
+      const valorHasta = selectHasta.value;
+
+      const fechas = [
+        ...new Set(
+          calcularDemoras().map(item => claveDia(item.inicioCalculo))
+        )
+      ].sort((a, b) => b.localeCompare(a));
+
+      selectDesde.innerHTML = '<option value="">Todas</option>';
+      selectHasta.innerHTML = '<option value="">Todas</option>';
+
+      for (const fechaISO of fechas) {
+        const [anio, mes, dia] = fechaISO.split("-");
+        const fechaVisible = `${dia}/${mes}/${anio}`;
+
+        const opcionDesde = document.createElement("option");
+        opcionDesde.value = fechaISO;
+        opcionDesde.textContent = fechaVisible;
+        selectDesde.appendChild(opcionDesde);
+
+        const opcionHasta = document.createElement("option");
+        opcionHasta.value = fechaISO;
+        opcionHasta.textContent = fechaVisible;
+        selectHasta.appendChild(opcionHasta);
+      }
+
+      if (fechas.includes(valorDesde)) {
+        selectDesde.value = valorDesde;
+      }
+
+      if (fechas.includes(valorHasta)) {
+        selectHasta.value = valorHasta;
+      }
+    }
+
+    function actualizarKPIs(datos) {
+      const totalMinutos = datos.reduce((suma, x) => suma + x.minutos, 0);
+      const promedio = datos.length ? totalMinutos / datos.length : 0;
+      const maxima = datos.length ? Math.max(...datos.map(x => x.minutos)) : 0;
+      const matriculas = new Set(datos.map(x => x.matricula)).size;
+
+      document.getElementById("kpiMatriculas").textContent =
+        matriculas.toLocaleString("es-UY");
+
+      document.getElementById("kpiPromedio").textContent =
+        minutosAHHMM(promedio);
+
+      document.getElementById("kpiMaxima").textContent =
+        minutosAHHMM(maxima);
+    }
+
+    function actualizarTabla(datos) {
+      const cuerpo = document.getElementById("tabla");
+      cuerpo.innerHTML = "";
+
+      if (!datos.length) {
+        cuerpo.innerHTML = `
+          <tr>
+            <td colspan="6" class="sin-datos">
+              No hay demoras para los filtros seleccionados.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      for (const item of datos) {
+const fila = document.createElement("tr");
+
+        const identificador = [
+          item.matricula,
+          item.inicial.getTime(),
+          item.siguiente.getTime()
+        ].join("|");
+
+        fila.innerHTML = `
+          <td>
+            <input
+              type="checkbox"
+              class="selectorFila"
+              data-id="${identificador}"
+              data-matricula="${item.matricula}"
+              data-inicial="${formatoFecha(item.inicial)}"
+              data-inicio-calculo="${formatoFecha(item.inicioCalculo)}"
+              data-siguiente="${formatoFecha(item.siguiente)}"
+              data-demora="${minutosAHHMM(item.minutos)}"
+            >
+          </td>
+          <td>${item.matricula}</td>
+          <td>${formatoFecha(item.inicial)}</td>
+          <td>${formatoFecha(item.inicioCalculo)}</td>
+          <td>${formatoFecha(item.siguiente)}</td>
+          <td>${minutosAHHMM(item.minutos)}</td>
+        `;
+
+        cuerpo.appendChild(fila);
+      }
+
+      actualizarCantidadSeleccionadas();
+    }
+
+    function actualizarGraficos(datos) {
+      const resumen = new Map();
+
+      for (const item of datos) {
+        if (!resumen.has(item.matricula)) {
+          resumen.set(item.matricula, { suma: 0, cantidad: 0 });
+        }
+
+        const actual = resumen.get(item.matricula);
+        actual.suma += item.horas;
+        actual.cantidad += 1;
+      }
+
+      const promedios = [...resumen.entries()]
+        .map(([matricula, x]) => ({
+          matricula,
+          promedio: x.suma / x.cantidad
+        }))
+        .sort((a, b) => b.promedio - a.promedio)
+        .slice(0, 20);
+
+      if (graficoPromedio) graficoPromedio.destroy();
+
+      graficoPromedio = new Chart(document.getElementById("graficoPromedio"), {
+        type: "bar",
+        data: {
+          labels: promedios.map(x => x.matricula),
+          datasets: [{
+            label: "Horas promedio",
+            data: promedios.map(x => Number(x.promedio.toFixed(2))),
+            backgroundColor: "rgba(56,189,248,.68)",
+            borderColor: "rgba(56,189,248,1)",
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { labels: { color: "#f8fafc" } }
+          },
+          scales: {
+            x: {
+              ticks: { color: "#a9b4c5" },
+              grid: { color: "rgba(148,163,184,.12)" }
+            },
+            y: {
+              beginAtZero: true,
+              ticks: { color: "#a9b4c5" },
+              grid: { color: "rgba(148,163,184,.12)" }
+            }
+          }
+        }
+      });
+    }
+
+    function actualizarDashboard() {
+      document.getElementById("modalDetalle").classList.add("oculto");
+      document.getElementById("tablaDetalleSeleccionado").innerHTML = "";
+      document.body.style.overflow = "";
+
+      const datos = filtrarDemoras();
+      actualizarKPIs(datos);
+      actualizarTabla(datos);
+      actualizarGraficos(datos);
+    }
+
+    function obtenerFilasSeleccionadas() {
+      return [...document.querySelectorAll(".selectorFila:checked")];
+    }
+
+    function actualizarCantidadSeleccionadas() {
+      const seleccionadas = obtenerFilasSeleccionadas().length;
+      document.getElementById("cantidadSeleccionadas").textContent =
+        `${seleccionadas} ${seleccionadas === 1 ? "fila seleccionada" : "filas seleccionadas"}`;
+
+      const todas = [...document.querySelectorAll(".selectorFila")];
+      const selectorTodas = document.getElementById("seleccionarTodas");
+
+      selectorTodas.checked =
+        todas.length > 0 && seleccionadas === todas.length;
+
+      selectorTodas.indeterminate =
+        seleccionadas > 0 && seleccionadas < todas.length;
+    }
+
+    function generarTablaDetalle() {
+      const seleccionadas = obtenerFilasSeleccionadas();
+
+      if (!seleccionadas.length) {
+        alert("Seleccioná al menos una fila.");
+        return;
+      }
+
+      const cuerpo = document.getElementById("tablaDetalleSeleccionado");
+      cuerpo.innerHTML = "";
+
+      seleccionadas.forEach(checkbox => {
+        const fila = document.createElement("tr");
+
+        fila.innerHTML = `
+          <td>${checkbox.dataset.matricula}</td>
+          <td>${checkbox.dataset.inicial}</td>
+          <td>${checkbox.dataset.inicioCalculo}</td>
+          <td>${checkbox.dataset.siguiente}</td>
+          <td>${checkbox.dataset.demora}</td>
+        `;
+
+        cuerpo.appendChild(fila);
+      });
+
+      document.getElementById("modalDetalle").classList.remove("oculto");
+      document.body.style.overflow = "hidden";
+    }
+
+    function cerrarModalDetalle() {
+      document.getElementById("modalDetalle").classList.add("oculto");
+      document.body.style.overflow = "";
+    }
+
+    async function cargarExcel() {
+      const estado = document.getElementById("estado");
+      estado.className = "estado";
+      estado.textContent = "Cargando la última versión de la planilla desde Dropbox…";
+
+      try {
+        const respuesta = await fetch(`${URL_EXCEL}&v=${Date.now()}`, {
+          cache: "no-store"
+        });
+
+        if (!respuesta.ok) {
+          throw new Error(`Dropbox respondió HTTP ${respuesta.status}`);
+        }
+
+        const contenido = await respuesta.arrayBuffer();
+        const libro = XLSX.read(contenido, {
+          type: "array",
+          cellDates: true
+        });
+
+        if (!libro.SheetNames.includes(HOJA)) {
+          throw new Error(`No se encontró la hoja "${HOJA}".`);
+        }
+
+        const hoja = libro.Sheets[HOJA];
+        const filas = XLSX.utils.sheet_to_json(hoja, {
+          defval: null,
+          raw: true
+        });
+
+        if (!filas.length) {
+          throw new Error("La hoja no contiene registros.");
+        }
+
+        const nombresColumnas = Object.keys(filas[0]);
+        const columnaMatricula = nombresColumnas.find(
+          x => normalizarTexto(x) === "MATRICULA"
+        );
+        const columnaFechaReal = nombresColumnas.find(
+          x => normalizarTexto(x) === "FECHA REAL"
+        );
+
+        if (!columnaMatricula) {
+          throw new Error("No se encontró la columna Matrícula.");
+        }
+
+        if (!columnaFechaReal) {
+          throw new Error("No se encontró la columna FECHA REAL.");
+        }
+
+        registros = filas
+          .map(fila => ({
+            matricula: String(fila[columnaMatricula] ?? "").trim().toUpperCase(),
+            fecha: fechaDesdeExcel(fila[columnaFechaReal])
+          }))
+          .filter(x => x.matricula && x.fecha && !Number.isNaN(x.fecha.getTime()));
+
+        cargarSelectorMatriculas();
+        cargarSelectoresFechas();
+        actualizarDashboard();
+
+        estado.className = "estado ok";
+        estado.textContent =
+          `Planilla actualizada: ${formatoFecha(new Date())} · ` +
+          `${registros.length.toLocaleString("es-UY")} registros válidos`;
+
+      } catch (error) {
+        console.error(error);
+        estado.className = "estado error";
+        estado.textContent =
+          `No se pudo leer la planilla de Dropbox: ${error.message}. ` +
+          `Verificá que el enlace siga siendo público.`;
+      }
+    }
+
+    document.getElementById("matricula").addEventListener("change", actualizarDashboard);
+    document.getElementById("desde").addEventListener("change", actualizarDashboard);
+    document.getElementById("hasta").addEventListener("change", actualizarDashboard);
+    document.getElementById("actualizar").addEventListener("click", cargarExcel);
+
+    document.getElementById("limpiar").addEventListener("click", () => {
+      document.getElementById("matricula").value = "";
+      document.getElementById("desde").value = "";
+      document.getElementById("hasta").value = "";
+      actualizarDashboard();
+    });
+
+    document.getElementById("tabla").addEventListener("change", evento => {
+      if (evento.target.classList.contains("selectorFila")) {
+        actualizarCantidadSeleccionadas();
+      }
+    });
+
+    document.getElementById("seleccionarTodas").addEventListener("change", evento => {
+      document.querySelectorAll(".selectorFila").forEach(checkbox => {
+        checkbox.checked = evento.target.checked;
+      });
+
+      actualizarCantidadSeleccionadas();
+    });
+
+    document.getElementById("generarDetalle").addEventListener(
+      "click",
+      generarTablaDetalle
+    );
+
+    document.getElementById("cerrarModal").addEventListener(
+      "click",
+      cerrarModalDetalle
+    );
+
+    document.getElementById("modalDetalle").addEventListener("click", evento => {
+      if (evento.target.id === "modalDetalle") {
+        cerrarModalDetalle();
+      }
+    });
+
+    document.addEventListener("keydown", evento => {
+      if (evento.key === "Escape") {
+        cerrarModalDetalle();
+      }
+    });
+
+    cargarExcel();
+    setInterval(cargarExcel, ACTUALIZAR_CADA_MS);
+  </script>
+</body>
+</html>
