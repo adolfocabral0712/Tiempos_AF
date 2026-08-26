@@ -2,12 +2,10 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    // Devuelve la planilla Excel desde Dropbox.
     if (url.pathname === "/api/datos") {
       return obtenerExcel(request, env);
     }
 
-    // Muestra el index.html y los demás archivos estáticos.
     return env.ASSETS.fetch(request);
   },
 };
@@ -19,10 +17,7 @@ async function obtenerExcel(request, env) {
         error: true,
         mensaje: "Método no permitido.",
       },
-      405,
-      {
-        Allow: "GET, HEAD",
-      }
+      405
     );
   }
 
@@ -30,7 +25,7 @@ async function obtenerExcel(request, env) {
     return respuestaJSON(
       {
         error: true,
-        mensaje: "Falta configurar el Secret EXCEL_URL en Cloudflare.",
+        mensaje: "Falta configurar el Secret EXCEL_URL.",
       },
       500
     );
@@ -39,7 +34,7 @@ async function obtenerExcel(request, env) {
   try {
     const urlDropbox = new URL(env.EXCEL_URL);
 
-    // Evita que Dropbox entregue una versión anterior.
+    // Evita recibir una versión anterior del Excel.
     urlDropbox.searchParams.set("t", Date.now().toString());
 
     const respuesta = await fetch(urlDropbox.toString(), {
@@ -47,7 +42,6 @@ async function obtenerExcel(request, env) {
       headers: {
         Accept:
           "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/octet-stream,*/*",
-        "User-Agent": "Cloudflare-Worker-Salida-Las-Canas/1.0",
       },
       redirect: "follow",
       cf: {
@@ -60,7 +54,7 @@ async function obtenerExcel(request, env) {
       return respuestaJSON(
         {
           error: true,
-          mensaje: "No se pudo descargar la planilla de Dropbox.",
+          mensaje: "No se pudo descargar la planilla.",
           detalle: `HTTP ${respuesta.status}`,
         },
         502
@@ -88,12 +82,6 @@ async function obtenerExcel(request, env) {
     headers.set("Pragma", "no-cache");
     headers.set("X-Content-Type-Options", "nosniff");
 
-    const contentLength = respuesta.headers.get("Content-Length");
-
-    if (contentLength) {
-      headers.set("Content-Length", contentLength);
-    }
-
     return new Response(
       request.method === "HEAD" ? null : respuesta.body,
       {
@@ -116,13 +104,12 @@ async function obtenerExcel(request, env) {
   }
 }
 
-function respuestaJSON(contenido, estado = 200, headersExtra = {}) {
+function respuestaJSON(contenido, estado = 200) {
   return new Response(JSON.stringify(contenido), {
     status: estado,
     headers: {
       "Content-Type": "application/json; charset=UTF-8",
       "Cache-Control": "no-store",
-      ...headersExtra,
     },
   });
 }
