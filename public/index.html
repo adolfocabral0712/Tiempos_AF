@@ -498,8 +498,7 @@
   </main>
 
   <script>
-    const URL_EXCEL =
-      "https://dl.dropbox.com/scl/fi/kgurggc48xd31rsnpwma2/SALIDA-LAS-CA-AS.xlsx?rlkey=p7yywus9ca8rl8cojtjxvuuvm&dl=1";
+    const URL_EXCEL = "/api/datos";
 
     const HOJA = "Hoja1";
     const ACTUALIZAR_CADA_MS = 5 * 60 * 1000;
@@ -1043,15 +1042,15 @@ const fila = document.createElement("tr");
     async function cargarExcel() {
       const estado = document.getElementById("estado");
       estado.className = "estado";
-      estado.textContent = "Cargando la última versión de la planilla desde Dropbox…";
+      estado.textContent = "Cargando la última versión de la planilla…";
 
       try {
-        const respuesta = await fetch(`${URL_EXCEL}&v=${Date.now()}`, {
+        const respuesta = await fetch(`${URL_EXCEL}?v=${Date.now()}`, {
           cache: "no-store"
         });
 
         if (!respuesta.ok) {
-          throw new Error(`Dropbox respondió HTTP ${respuesta.status}`);
+          throw new Error(`El servidor respondió HTTP ${respuesta.status}`);
         }
 
         const contenido = await respuesta.arrayBuffer();
