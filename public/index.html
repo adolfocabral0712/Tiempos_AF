@@ -10,16 +10,26 @@
 
   <style>
     :root {
-      --fondo: #0f172a;
-      --panel: #182235;
-      --panel2: #202c42;
-      --texto: #f8fafc;
-      --secundario: #a9b4c5;
-      --borde: #334155;
-      --acento: #38bdf8;
-      --verde: #22c55e;
-      --amarillo: #f59e0b;
-      --rojo: #ef4444;
+      --naranja-principal: #C65312;
+      --naranja-interaccion: #E86F18;
+      --naranja-claro: #FFB86B;
+      --negro-carbon: #1F1F1F;
+      --gris-fondo: #F4F3F1;
+      --gris-secundario: #6B6B6B;
+      --blanco: #FFFFFF;
+
+      --fondo: var(--gris-fondo);
+      --panel: var(--blanco);
+      --panel2: #F8F6F3;
+      --texto: var(--negro-carbon);
+      --secundario: var(--gris-secundario);
+      --borde: #DEDAD5;
+      --acento: var(--naranja-principal);
+      --acento-hover: var(--naranja-interaccion);
+      --acento-claro: var(--naranja-claro);
+      --verde: #2E7D32;
+      --amarillo: #A86400;
+      --rojo: #B3261E;
     }
 
     * { box-sizing: border-box; }
@@ -57,8 +67,8 @@
       color: var(--secundario);
     }
 
-    .estado.ok { color: #86efac; }
-    .estado.error { color: #fca5a5; }
+    .estado.ok { color: var(--verde); }
+    .estado.error { color: var(--rojo); }
 
     .filtros {
       display: grid;
@@ -80,7 +90,6 @@
       text-transform: uppercase;
     }
 
-
     .buscador-matricula {
       position: relative;
     }
@@ -96,7 +105,7 @@
       background: var(--panel2);
       border: 1px solid var(--borde);
       border-radius: 8px;
-      box-shadow: 0 12px 28px rgba(0, 0, 0, .45);
+      box-shadow: 0 12px 28px rgba(31, 31, 31, .14);
     }
 
     .lista-matriculas.oculto {
@@ -107,7 +116,7 @@
       padding: 9px 11px;
       color: var(--texto);
       cursor: pointer;
-      border-bottom: 1px solid rgba(255, 255, 255, .08);
+      border-bottom: 1px solid var(--borde);
     }
 
     .opcion-matricula:last-child {
@@ -115,8 +124,8 @@
     }
 
     .opcion-matricula:hover {
-      background: var(--acento);
-      color: #000000;
+      background: var(--acento-hover);
+      color: var(--blanco);
     }
 
     select, input, button {
@@ -133,7 +142,7 @@
     button {
       border: none;
       background: var(--acento);
-      color: #062033;
+      color: var(--blanco);
       font-weight: bold;
       cursor: pointer;
     }
@@ -224,7 +233,7 @@
     }
 
     th.ordenable.orden-activo {
-      color: #ffffff;
+      color: var(--naranja-principal);
     }
 
     .flecha-orden {
@@ -244,9 +253,8 @@
     }
 
     tr:hover td {
-      background: rgba(255,255,255,.03);
+      background: rgba(198, 83, 18, .07);
     }
-
 
     .sin-datos {
       padding: 28px;
@@ -263,12 +271,10 @@
     }
 
     .acciones-seleccion button,
-
     .acciones-seleccion span {
       color: var(--secundario);
       font-size: 13px;
     }
-
 
     .modal {
       position: fixed;
@@ -278,7 +284,7 @@
       align-items: center;
       justify-content: center;
       padding: 20px;
-      background: rgba(2, 6, 23, 0.78);
+      background: rgba(31, 31, 31, 0.58);
       backdrop-filter: blur(4px);
     }
 
@@ -293,7 +299,7 @@
       background: var(--panel);
       border: 1px solid var(--borde);
       border-radius: 16px;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, .45);
+      box-shadow: 0 20px 60px rgba(31, 31, 31, .24);
     }
 
     .modal-encabezado {
@@ -347,7 +353,6 @@
       text-align: center;
     }
 
-
     th:first-child,
     td:first-child {
       width: 46px;
@@ -357,12 +362,12 @@
     input[type="checkbox"] {
       width: 18px;
       min-height: 18px;
-      accent-color: var(--acento);
+      accent-color: var(--naranja-principal);
       cursor: pointer;
     }
 
     #generarDetalle {
-      color: #000000 !important;
+      color: var(--blanco) !important;
     }
 
     @media (max-width: 1050px) {
@@ -422,7 +427,6 @@
     </section>
 
     <section class="kpis">
-
       <article class="kpi">
         <div class="kpi-titulo">Matrículas</div>
         <div id="kpiMatriculas" class="kpi-valor">0</div>
@@ -576,7 +580,6 @@
 
       return `${String(horas).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
     }
-
 
     function claveDia(fecha) {
       const anio = fecha.getFullYear();
@@ -885,7 +888,7 @@
       }
 
       for (const item of datos) {
-const fila = document.createElement("tr");
+        const fila = document.createElement("tr");
 
         const identificador = [
           item.matricula,
@@ -949,8 +952,9 @@ const fila = document.createElement("tr");
           datasets: [{
             label: "Horas promedio",
             data: promedios.map(x => Number(x.promedio.toFixed(2))),
-            backgroundColor: "rgba(56,189,248,.68)",
-            borderColor: "rgba(56,189,248,1)",
+            backgroundColor: "rgba(198, 83, 18, .72)",
+            hoverBackgroundColor: "rgba(232, 111, 24, .88)",
+            borderColor: "#C65312",
             borderWidth: 1
           }]
         },
@@ -958,17 +962,17 @@ const fila = document.createElement("tr");
           responsive: true,
           maintainAspectRatio: false,
           plugins: {
-            legend: { labels: { color: "#f8fafc" } }
+            legend: { labels: { color: "#1F1F1F" } }
           },
           scales: {
             x: {
-              ticks: { color: "#a9b4c5" },
-              grid: { color: "rgba(148,163,184,.12)" }
+              ticks: { color: "#6B6B6B" },
+              grid: { color: "rgba(107,107,107,.16)" }
             },
             y: {
               beginAtZero: true,
-              ticks: { color: "#a9b4c5" },
-              grid: { color: "rgba(148,163,184,.12)" }
+              ticks: { color: "#6B6B6B" },
+              grid: { color: "rgba(107,107,107,.16)" }
             }
           }
         }
@@ -1137,6 +1141,7 @@ const fila = document.createElement("tr");
         document.getElementById("listaMatriculas").classList.add("oculto");
       }
     });
+
     document.getElementById("desde").addEventListener("change", actualizarDashboard);
     document.getElementById("hasta").addEventListener("change", actualizarDashboard);
     document.getElementById("actualizar").addEventListener("click", cargarExcel);
